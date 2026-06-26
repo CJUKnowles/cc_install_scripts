@@ -1,18 +1,81 @@
-# One-click installer that calls the other scripts
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-# The order must be:
-# install_omnet.sh
-# install_inet.sh
-# install_inet_extensions.sh
-# install_raynet
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# The order within inet_extensions shouldn't matter much, may need to tweak it later.
+OMNET_INSTALLER="$ROOT_DIR/installers/install_omnet.sh"
+INET_INSTALLER="$ROOT_DIR/installers/install_inet.sh"
+INET_EXT_INSTALLER="$ROOT_DIR/installers/inet_extensions/install_inet_extensions.sh"
+RAYNET_INSTALLER="$ROOT_DIR/installers/install_raynet.sh"
 
-# Make this into a one-run run script that attempts to install all the components.
-# Each install script should first verify that the componenet being installed does not already exist
-# Maybe add a quick series of y/n questiosn to verify which componenets the user wants installed.
-# DO you want omnet? y/n
-# Do you want inet? y/n
-# do you want inet_extensions? y/n
-# Do you want raynet? y/n
-# etc. Make it look nicer than the questions I've written.
+say() {
+    printf '\n==> %s\n' "$*"
+}
+
+ask_yes_no() {
+    local prompt="$1"
+    local default="${2:-y}"
+    local suffix
+    local reply
+
+    if [[ "$default" == "y" ]]; then
+        suffix="[Y/n]"
+    else
+        suffix="[y/N]"
+    fi
+
+    while true; do
+        read -r -p "$prompt $suffix " reply
+        reply="${reply:-$default}"
+        case "$reply" in
+            [Yy]|[Yy][Ee][Ss]) return 0 ;;
+            [Nn]|[Nn][Oo]) return 1 ;;
+            *) printf 'Please answer yes or no.\n' ;;
+        esac
+    done
+}
+
+run_installer() {
+    local name="$1"
+    local script="$2"
+
+    if [[ ! -f "$script" ]]; then
+        printf 'ERROR: installer not found: %s\n' "$script" >&2
+        exit 1
+    fi
+
+    say "Installing $name"
+    bash "$script"
+}
+
+main() {
+    say "Congestion control research stack installer"
+    printf 'This will install selected components in dependency order.\n'
+
+    local install_omnet=false
+    local install_inet=false
+    local install_inet_extensions=false
+    local install_raynet=false
+
+    if ask_yes_no "Install OMNeT++?" "y"; then
+        install_omnet=true
+    fi
+    if ask_yes_no "Install INET 4.5?" "y"; then
+        install_inet=true
+    fi
+    if ask_yes_no "Install the INET extension repositories?" "y"; then
+        install_inet_extensions=true
+    fi
+    if ask_yes_no "Install RayNet?" "y"; then
+        install_raynet=true
+    fi
+
+    $install_omnet && run_installer "OMNeT++" "$OMNET_INSTALLER"
+    $install_inet && run_installer "INET 4.5" "$INET_INSTALLER"
+    $install_inet_extensions && run_installer "INET extension repositories" "$INET_EXT_INSTALLER"
+    $install_raynet && run_installer "RayNet" "$RAYNET_INSTALLER"
+
+    say "Done"
+}
+
+main "$@"
