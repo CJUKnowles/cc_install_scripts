@@ -7,6 +7,7 @@ OMNET_INSTALLER="$ROOT_DIR/installers/install_omnet.sh"
 INET_INSTALLER="$ROOT_DIR/installers/install_inet.sh"
 INET_EXT_INSTALLER="$ROOT_DIR/installers/inet_extensions/install_inet_extensions.sh"
 RAYNET_INSTALLER="$ROOT_DIR/installers/install_raynet.sh"
+OLYMPUS_INSTALLER="$ROOT_DIR/installers/install_olympus.sh"
 
 say() {
     printf '\n==> %s\n' "$*"
@@ -43,6 +44,7 @@ run_installer() {
         printf 'ERROR: installer not found: %s\n' "$script" >&2
         exit 1
     fi
+    bash -n "$script"
 
     say "Installing $name"
     bash "$script"
@@ -56,6 +58,7 @@ main() {
     local install_inet=false
     local install_inet_extensions=false
     local install_raynet=false
+    local install_olympus=false
 
     if ask_yes_no "Install OMNeT++?" "y"; then
         install_omnet=true
@@ -69,11 +72,15 @@ main() {
     if ask_yes_no "Install RayNet?" "y"; then
         install_raynet=true
     fi
+    if ask_yes_no "Install Olympus?" "y"; then
+        install_olympus=true
+    fi
 
     $install_omnet && run_installer "OMNeT++" "$OMNET_INSTALLER"
     $install_inet && run_installer "INET 4.5" "$INET_INSTALLER"
     $install_inet_extensions && run_installer "INET extension repositories" "$INET_EXT_INSTALLER"
     $install_raynet && run_installer "RayNet" "$RAYNET_INSTALLER"
+    $install_olympus && run_installer "Olympus" "$OLYMPUS_INSTALLER"
 
     say "Done"
 }

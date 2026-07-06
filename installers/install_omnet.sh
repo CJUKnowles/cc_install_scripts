@@ -13,12 +13,22 @@ fail() {
     exit 1
 }
 
+detect_make_jobs() {
+    if command -v nproc >/dev/null 2>&1; then
+        nproc
+    else
+        getconf _NPROCESSORS_ONLN 2>/dev/null || printf '1\n'
+    fi
+}
+
 omnet_is_available() {
     [[ -f "$OMNET_DIR/setenv" ]] || return 1
-    bash -lc "source '$OMNET_DIR/setenv' >/dev/null 2>&1 && command -v omnetpp >/dev/null 2>&1"
+    OMNET_DIR="$OMNET_DIR" bash -lc 'source "$OMNET_DIR/setenv" >/dev/null 2>&1 && command -v omnetpp >/dev/null 2>&1'
 }
 
 main() {
+    local make_jobs="${MAKE_JOBS:-$(detect_make_jobs)}"
+
     if omnet_is_available; then
         say "OMNeT++ is already installed and sourceable at $OMNET_DIR"
         exit 0
@@ -44,8 +54,8 @@ main() {
 
     [[ -x ./install.sh ]] || fail "OMNeT++ install.sh is missing or not executable in $OMNET_DIR"
 
-    say "Running OMNeT++ install.sh"
-    ./install.sh
+    say "Running OMNeT++ install.sh with $make_jobs parallel make jobs"
+    MAKEFLAGS="-j$make_jobs ${MAKEFLAGS:-}" ./install.sh
 
     if ! omnet_is_available; then
         fail "OMNeT++ install finished, but '$OMNET_DIR/setenv' did not expose the omnetpp command"
